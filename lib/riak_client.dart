@@ -2,10 +2,10 @@
 // All rights reserved. Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// version:       0.5.0
+// version:       0.5.1
 // last-modified: 2013-06-22
 
-library riak;
+library riak_client;
 
 import 'dart:async';
 import 'dart:collection';

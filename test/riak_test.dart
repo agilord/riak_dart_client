@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:unittest/unittest.dart';
 
-import 'package:riak/riak.dart' as riak;
+import 'package:riak_client/riak_client.dart' as riak;
 part 'local_http_test.dart';
 
 main() {

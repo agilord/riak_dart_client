@@ -1,5 +1,5 @@
 
-# riak-dart-client
+# Riak Dart client
 
 Riak database client, written in Dart.
 
@@ -50,4 +50,4 @@ like to add something, contact us (see AUTHORS or pubspec file).
 - Dart: http://dartlang.org/
 
 - Main site: http://code.google.com/p/riak-dart/
-- GitHub mirror: https://github.com/agilord/riak-dart-client/
+- GitHub mirror: https://github.com/agilord/riak_dart_client/

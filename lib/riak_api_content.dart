@@ -2,7 +2,7 @@
 // All rights reserved. Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-part of riak;
+part of riak_client;
 
 /** Data holder with format, header and index metadata. */
 class Content {

@@ -116,7 +116,7 @@ class LocalHttpTest {
               expect(response.success, false);
               return bucket.store("k3",
                   new riak.Content.stream(
-                      new File("../lib/riak.dart").openRead(),
+                      new File("../lib/riak_client.dart").openRead(),
                       type:new ContentType("test", "binary")));
             })
             .then((response) {
@@ -132,8 +132,9 @@ class LocalHttpTest {
             })
             .then((content) {
               expect(content, hasLength(
-                  new File("../lib/riak.dart").lengthSync()));
-              expect(content, new File("../lib/riak.dart").readAsBytesSync());
+                  new File("../lib/riak_client.dart").lengthSync()));
+              expect(content,
+                  new File("../lib/riak_client.dart").readAsBytesSync());
               return deleteKey("k3");
             })
             .then((response) {
