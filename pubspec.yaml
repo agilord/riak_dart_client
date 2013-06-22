@@ -1,0 +1,11 @@
+name: riak
+version: 0.5.0
+authors:
+- Istvan Soos <istvan.soos@gmail.com>
+- Ian M. Jones <ian@ianmjones.com>
+description: Riak Client using the HTTP API
+homepage: https://code.google.com/p/riak-dart/
+documentation: https://code.google.com/p/riak-dart/
+dev_dependencies:
+  args: any
+  unittest: any
