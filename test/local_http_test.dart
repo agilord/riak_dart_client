@@ -18,17 +18,25 @@ class LocalHttpTest {
     }
   }
 
+  File localFile(String relativePath) {
+    return new File.fromPath(config.scriptPath.append(relativePath));
+  }
+
   run() {
     group('Riak HTTP: ', () {
 
       test('simple run', () {
         Future f = client.listBuckets().toList()
             .then((buckets) {
-              expect(buckets, hasLength(0));
+              if (!config.skipDataCheck) {
+                expect(buckets, hasLength(0));
+              }
               return bucket.fetch("k1");
             })
             .then((response) {
-              expect(response.success, false);
+              if (!config.skipDataCheck) {
+                expect(response.success, false);
+              }
               return bucket.store("k1", new riak.Content.json({"x":1}));
             })
             .then((response) {
@@ -46,8 +54,11 @@ class LocalHttpTest {
               return bucket.listKeys().toList();
             })
             .then((keys) {
-              expect(keys, hasLength(1));
-              expect(keys[0], "k1");
+              if (!config.skipDataCheck) {
+                expect(keys, hasLength(1));
+                expect(keys[0], "k1");
+              }
+              expect(keys, contains("k1"));
               return bucket.fetch("k1");
             })
             .then((response) {
@@ -79,7 +90,9 @@ class LocalHttpTest {
       test('test index store and query', () {
         Future f = bucket.fetch("k2")
             .then((response) {
-              expect(response.success, false);
+              if (!config.skipDataCheck) {
+                expect(response.success, false);
+              }
               var index = new riak.IndexBuilder()
               ..addInt("index1", 2)
               ..addString("index2", "c");
@@ -113,10 +126,12 @@ class LocalHttpTest {
       test('binary file', () {
         Future f = bucket.fetch("k3")
             .then((response) {
-              expect(response.success, false);
+              if (!config.skipDataCheck) {
+                expect(response.success, false);
+              }
               return bucket.store("k3",
                   new riak.Content.stream(
-                      new File("../lib/riak_client.dart").openRead(),
+                      localFile("../lib/riak_client.dart").openRead(),
                       type:new ContentType("test", "binary")));
             })
             .then((response) {
@@ -132,9 +147,9 @@ class LocalHttpTest {
             })
             .then((content) {
               expect(content, hasLength(
-                  new File("../lib/riak_client.dart").lengthSync()));
+                  localFile("../lib/riak_client.dart").lengthSync()));
               expect(content,
-                  new File("../lib/riak_client.dart").readAsBytesSync());
+                  localFile("../lib/riak_client.dart").readAsBytesSync());
               return deleteKey("k3");
             })
             .then((response) {
@@ -146,7 +161,9 @@ class LocalHttpTest {
       test('bucket props', () {
         Future f = bucket.fetch("k4")
             .then((response) {
-              expect(response.success, false);
+              if (!config.skipDataCheck) {
+                expect(response.success, false);
+              }
               return bucket.store("k4", new riak.Content.text("abc123"));
             })
             .then((response) {

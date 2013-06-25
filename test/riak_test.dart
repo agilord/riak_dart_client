@@ -20,6 +20,9 @@ class TestConfig {
   int    httpPort   = 8098;
   String bucket     = "test";
   bool   keepData   = false;
+  bool   skipDataCheck = false;
+
+  Path get scriptPath => new Path(new File(new Options().script).directory.path);
 
   TestConfig();
   TestConfig.args(List<String> arguments) {
@@ -35,8 +38,11 @@ class TestConfig {
         help: 'The bucket to store the test entries.');
     parser.addFlag(
         'keep-data',
-        help: 'Set this to true to prevent data to be deleted '
+        help: 'Set this to true to prevent data from being deleted '
               'at the end of the successful tests.');
+    parser.addFlag(
+        'skip-data-check',
+        help: 'Set this to true if buckets with data exist before tests run.');
     parser.addFlag('help', help: 'This help message.',
         callback: (help) {
           if (help) {
@@ -50,6 +56,7 @@ class TestConfig {
     httpPort = int.parse(results['http-port']);
     bucket = results['bucket'];
     keepData = results['keep-data'];
-    // print("Test config: $httpHost, $httpPort, $bucket, $keepData");
+    skipDataCheck = results['skip-data-check'];
+    // print("Test config: $httpHost, $httpPort, $bucket, $keepData, $skipDataCheck");
   }
 }
