@@ -63,6 +63,21 @@ class _HttpClient extends Client {
     return c.future;
   }
 
+  // TODO: find a better place for the date(format) methods
+  static DateFormat LAST_MODIFIED_DATEFORMAT =
+      new DateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
+
+  _getLastModified(HttpHeaders headers) {
+    String text = headers.value(HttpHeaders.LAST_MODIFIED);
+    if (text != null) {
+      try {
+        return LAST_MODIFIED_DATEFORMAT.parse(text);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
   _extractFromBody(Completer c, String bucket, String key,
       HttpClientResponseBody body, Resolver resolver) {
     int code = body.statusCode;
@@ -72,7 +87,13 @@ class _HttpClient extends Client {
 
     Object result = null;
     String vclock = body.headers.value(HEADER_VCLOCK);
-    if (body.statusCode == HttpStatus.OK) {
+    String etag = body.headers.value(HttpHeaders.ETAG);
+    DateTime lastmod = _getLastModified(body.headers);
+
+    if (body.statusCode == HttpStatus.NOT_MODIFIED) {
+      result = new Object(_bucket(bucket), key, vclock, null, etag, lastmod);
+      c.complete(new Response(code, success, result));
+    } else if (body.statusCode == HttpStatus.OK) {
       Content content = null;
       if (body.type == "text") {
         content = new Content.text(body.body, type:body.contentType);
@@ -83,7 +104,7 @@ class _HttpClient extends Client {
             new Stream.fromIterable(body.body),
             type:body.contentType);
       }
-      result = new Object(_bucket(bucket), key, vclock, content);
+      result = new Object(_bucket(bucket), key, vclock, content, etag, lastmod);
       c.complete(new Response(code, success, result));
     } else if (body.statusCode == HttpStatus.MULTIPLE_CHOICES) {
       if (resolver == null) {

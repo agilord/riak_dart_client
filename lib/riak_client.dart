@@ -12,6 +12,8 @@ import 'dart:collection';
 import 'dart:io';
 import 'dart:json' as json;
 
+import 'package:intl/intl.dart';
+
 /* core API classes */
 part 'riak_api_base.dart';
 

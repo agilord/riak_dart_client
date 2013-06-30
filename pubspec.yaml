@@ -6,6 +6,8 @@ authors:
 description: Riak Client using the HTTP API
 homepage: https://code.google.com/p/riak-dart/
 documentation: https://code.google.com/p/riak-dart/
+dependencies:
+  intl: 0.5.20
 dev_dependencies:
   args: any
   unittest: any
