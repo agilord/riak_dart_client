@@ -28,11 +28,14 @@ class FetchRequest {
   final String bucket;
   final String key;
   final Quorum quorum;
+  final Resolver resolver;
+
   /*
   final String vclock;
   bool head;*/
 
-  FetchRequest(this.bucket, this.key, { /* this.vclock, */ this.quorum });
+  FetchRequest(this.bucket, this.key,
+      { /* this.vclock, */ this.quorum, this.resolver });
 }
 
 class StoreRequest {
@@ -42,9 +45,10 @@ class StoreRequest {
   final String vclock;
   final Quorum quorum;
   final bool returnBody;
+  final Resolver resolver;
 
   StoreRequest(this.bucket, this.key, this.content,
-      { this.vclock, this.quorum, this.returnBody });
+      { this.vclock, this.quorum, this.returnBody, this.resolver });
 }
 
 class IndexRequest {
