@@ -12,7 +12,8 @@ class _HttpClient extends Client {
 
   HttpClient _client = new HttpClient();
 
-  _HttpClient(this.host, this.port) : super._();
+  _HttpClient(this.host, this.port,
+      { Resolver resolverProvider(String bucket) }) : super._(resolverProvider);
 
   Future<Response> delete(DeleteRequest req) {
     var c = new Completer();
@@ -38,25 +39,23 @@ class _HttpClient extends Client {
     return c.future;
   }
 
-  Future<Response<Object>> fetch(FetchRequest req) {
+  Future<Response<Object>> fetch(FetchRequest req, [ String vtag ]) {
     var c = new Completer();
     var params = _quorum(req.quorum);
+    // TODO: Decide if vtag can be part of the normal fetch request. If it does,
+    //       we shall expose the HttpStatus.MULTIPLE_CHOICES content somehow.
+    if (vtag != null) {
+      params = params == null ? new Map() : params;
+      params["vtag"] = vtag;
+    }
     _openUri("get",
         "/buckets/${_uri(req.bucket)}/keys/${_uri(req.key)}", params)
       .then((HttpClientRequest request) {
-        // TODO: implement multipart header for conflict resolution
-        // request.headers.set(HttpHeaders.ACCEPT, "multipart/mixed");
         return request.close();
       })
       .then(HttpBodyHandler.processResponse)
       .then((HttpClientResponseBody body) {
-        int code = body.statusCode;
-        bool success =
-            code == HttpStatus.OK ||
-            code == HttpStatus.NOT_MODIFIED;
-
-        var result = _extractFromBody(req.bucket, req.key, body);
-        c.complete(new Response(code, success, result));
+        _extractFromBody(c, req.bucket, req.key, body, req.resolver);
       })
       .catchError((e) {
         c.completeError(e);
@@ -64,10 +63,16 @@ class _HttpClient extends Client {
     return c.future;
   }
 
-  Object _extractFromBody(String bucket, String key, HttpClientResponseBody body) {
+  _extractFromBody(Completer c, String bucket, String key,
+      HttpClientResponseBody body, Resolver resolver) {
+    int code = body.statusCode;
+    bool success =
+        code == HttpStatus.OK ||
+        code == HttpStatus.NOT_MODIFIED;
+
     Object result = null;
+    String vclock = body.headers.value(HEADER_VCLOCK);
     if (body.statusCode == HttpStatus.OK) {
-      String vclock = body.headers.value(HEADER_VCLOCK);
       Content content = null;
       if (body.type == "text") {
         content = new Content.text(body.body, type:body.contentType);
@@ -79,8 +84,62 @@ class _HttpClient extends Client {
             type:body.contentType);
       }
       result = new Object(_bucket(bucket), key, vclock, content);
+      c.complete(new Response(code, success, result));
+    } else if (body.statusCode == HttpStatus.MULTIPLE_CHOICES) {
+      if (resolver == null) {
+        resolver = Resolver.DEFAULT;
+      }
+      Set<String> vtags = new Set();
+      try {
+        String s;
+        body.body.split(new RegExp("\\s+")).forEach((String line) {
+          if (line.isNotEmpty && line != "Siblings:") {
+            vtags.add(line);
+          }
+        });
+      } catch (e) {
+        c.completeError(e);
+        return;
+      }
+
+      StreamController siblings = new StreamController(sync: true);
+      vtags.forEach((vtag) {
+        fetch(new FetchRequest(bucket, key, resolver: resolver), vtag)
+          .then((Response response) {
+            if (response.success) {
+              siblings.add(response.result);
+              vtags.remove(vtag);
+              if (vtags.isEmpty) {
+                siblings.close();
+              }
+            } else {
+              siblings.addError("Unable to fetch sibling: $vtag");
+              siblings.close();
+            }
+          })
+          .catchError((e) {
+            siblings.addError(e);
+            siblings.close();
+          });
+      });
+
+      var contentCompleter = new Completer<Content>();
+      resolver.resolve(siblings.stream, contentCompleter);
+      contentCompleter.future.then((Content content) {
+        // TODO: call store directly and pass resolver
+        getBucket(bucket).store(key, content, vclock: vclock, returnBody: true)
+          .then((Response<Object> response) {
+            c.complete(response);
+          })
+          .catchError((e) {
+            c.completeError(e);
+          });
+      }).catchError((e) {
+        c.completeError(e);
+      });
+    } else {
+      c.complete(new Response(code, success));
     }
-    return result;
   }
 
   Future<Response<Object>> store(StoreRequest req) {
@@ -138,17 +197,16 @@ class _HttpClient extends Client {
     });
     if (returnBody) {
       f.then((HttpClientResponseBody body) {
-        int code = body.statusCode;
-        bool success =
-            code == HttpStatus.OK ||
-            code == HttpStatus.CREATED ||
-            code == HttpStatus.NO_CONTENT;
-
-        var result = null;
         if (req.returnBody) {
-          result = _extractFromBody(req.bucket, req.key, body);
+          _extractFromBody(c, req.bucket, req.key, body, req.resolver);
+        } else {
+          int code = body.statusCode;
+          bool success =
+              code == HttpStatus.OK ||
+              code == HttpStatus.CREATED ||
+              code == HttpStatus.NO_CONTENT;
+          c.complete(new Response(code, success));
         }
-        c.complete(new Response(code, success, result));
       })
       .catchError((e) {
         c.completeError(e);

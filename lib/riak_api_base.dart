@@ -11,7 +11,8 @@ abstract class Client {
   Future<Response> ping();
 
   /** Creates a new Bucket object */
-  Bucket getBucket(String name) => new Bucket(this, name);
+  Bucket getBucket(String name, { Resolver resolver }) =>
+      new Bucket(this, name, resolver: _resolver(name, resolver));
 
   /** List all the buckets. Might be a slow operation on large Riak setups. */
   Stream<String> listBuckets();
@@ -49,7 +50,20 @@ abstract class Client {
   /** Creates a new client based on the Riak HTTP API. */
   factory Client.http(String host, int port) => new _HttpClient(host, port);
 
-  Client._();
+  var _resolverProvider;
+  Client._(Resolver resolverProvider(String bucket)) {
+    this._resolverProvider = resolverProvider;
+  }
+
+  Resolver _resolver(String bucket, Resolver provided) {
+    if (provided != null) {
+      return provided;
+    }
+    if (_resolverProvider != null) {
+      return _resolverProvider(bucket);
+    }
+    return null;
+  }
 }
 
 /**
@@ -64,7 +78,10 @@ class Bucket {
   /** The bucket's name.  */
   final String name;
 
-  Bucket(this.client, this.name);
+  /** The bucket's conflict resolver */
+  final Resolver resolver;
+
+  Bucket(this.client, this.name, { this.resolver });
 
   /** Get the bucket properties. */
   Future<BucketProps> getProps() =>
@@ -78,14 +95,17 @@ class Bucket {
       client.setBucketProps(name, props);
 
   /** Fetch an object. */
-  Future<Response<Object>> fetch(String key, { Quorum quorum }) =>
-      client.fetch(new FetchRequest(name, key, quorum:quorum));
+  Future<Response<Object>> fetch(String key,
+      { Quorum quorum, Resolver resolver }) =>
+          client.fetch(new FetchRequest(name, key,
+              quorum: quorum, resolver: _resolver(resolver) ));
 
   /** Store or update an object. */
   Future<Response<Object>> store(String key, Content content,
-      { String vclock, Quorum quorum, bool returnBody }) =>
-          client.store(new StoreRequest(name, key, content, vclock:vclock ,
-              quorum:quorum , returnBody:returnBody ));
+      { String vclock, Quorum quorum, bool returnBody, Resolver resolver }) =>
+          client.store(new StoreRequest(name, key, content, vclock: vclock ,
+              quorum: quorum , returnBody: returnBody,
+              resolver: _resolver(resolver) ));
 
   /** Delete an object. */
   Future<Response> delete(String key, { String vclock, Quorum quorum }) =>
@@ -113,6 +133,27 @@ class Bucket {
    * Creates a new Index object that references the built-in $key index.
    */
   Index<String> getKeyIndex() => getStringIndex("\$key");
+
+  Resolver _resolver(Resolver provided) =>
+      provided != null ? provided : this.resolver;
+}
+
+/**
+ * Read-only Object header, without the content information.
+ *
+ * This is used instead of Object in cases where we don't want to ever call the
+ * mutate operations (store / delete), e.g. during conflict resolution.
+ */
+abstract class ObjectHeader {
+
+  /** The bucket's name. */
+  String get bucketName;
+
+  /** The entry's key. */
+  String get key;
+
+  /** The vector clock value as returned by the server. */
+  String get vclock;
 }
 
 /**
@@ -120,7 +161,7 @@ class Bucket {
  * Although the content's JSON data is still mutable, the changes are not pushed
  * back to the server, only with the explicit store call.
  */
-class Object {
+class Object implements ObjectHeader {
 
   /** Reference to the bucket that is associated with the object. */
   final Bucket bucket;
@@ -148,9 +189,10 @@ class Object {
 
   /** Update the entry (and use the vclock to reference the version). */
   Future<Response<Object>> store(Content content,
-      { Quorum quorum, bool returnBody }) =>
+      { Quorum quorum, bool returnBody, Resolver resolver }) =>
           bucket.store(key, content,
-              vclock:vclock, quorum:quorum, returnBody:returnBody);
+              vclock: vclock, quorum: quorum, returnBody: returnBody,
+              resolver: resolver );
 }
 
 /**

@@ -211,3 +211,59 @@ class DateTimeUtils {
     return sb.toString();
   }
 }
+
+/**
+ * Resolves conflicting siblings, if allow_mult=true and multiple overlapping
+ * store operations produced siblings.
+ */
+abstract class Resolver {
+
+  /** Won't resolve anything, just reports failure (completes an error). */
+  static final Resolver FAIL = new _FailResolver();
+
+  /** The default resolver. */
+  static final Resolver DEFAULT = FAIL;
+
+  /**
+   * The resolver should read the siblings from the stream and after everything
+   * is read, should complete the provided completer with the resolved content.
+   */
+  resolve(Stream<Object> siblings, Completer<Content> completer);
+
+  /**
+   * Simple Resolver that recieves the object header, the two content instance
+   * and returns the merged one. The stream handling and completer is handled
+   * by the wrapper implementation.
+   */
+  factory Resolver.merge(
+      Content merge(ObjectHeader header, Content a, Content b)) =>
+          new _MergeResolver(merge);
+}
+
+class _MergeResolver implements Resolver {
+
+  var merge;
+  _MergeResolver(Content this.merge(ObjectHeader header, Content a, Content b));
+
+  resolve(Stream<Object> siblings, Completer<Content> completer) {
+    Content result = null;
+    siblings.listen((Object sibling) {
+      if (result == null) {
+        result = sibling.content;
+      } else {
+        result = merge(sibling, sibling.content, result);
+      }
+    }, onDone: () {
+      completer.complete(result);
+    }, onError: (e) {
+      completer.completeError(e);
+    });
+  }
+}
+
+class _FailResolver implements Resolver {
+
+  resolve(Stream<Object> siblings, Completer<Content> completer) {
+    completer.completeError("No conflict resolver is configured.");
+  }
+}
