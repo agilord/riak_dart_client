@@ -51,6 +51,13 @@ class _HttpClient extends Client {
     _openUri("get",
         "/buckets/${_uri(req.bucket)}/keys/${_uri(req.key)}", params)
       .then((HttpClientRequest request) {
+        if (req.ifNotVtag != null) {
+          request.headers.set(HttpHeaders.IF_NONE_MATCH, req.ifNotVtag);
+        }
+        if (req.ifModifiedSince != null) {
+          request.headers.set(HttpHeaders.IF_MODIFIED_SINCE,
+              _formatLastModified(req.ifModifiedSince));
+        }
         return request.close();
       })
       .then(HttpBodyHandler.processResponse)
@@ -66,18 +73,25 @@ class _HttpClient extends Client {
   // TODO: find a better place for the date(format) methods
   static DateFormat LAST_MODIFIED_DATEFORMAT =
       new DateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
+  // TODO: remove this after timezone formatting is implemented in intl
+  static DateFormat LAST_MODIFIED_DATEFORMAT_WITHOUT_TZ =
+      new DateFormat("EEE, dd MMM yyyy HH:mm:ss");
 
   _getLastModified(HttpHeaders headers) {
     String text = headers.value(HttpHeaders.LAST_MODIFIED);
     if (text != null) {
       try {
-        return LAST_MODIFIED_DATEFORMAT.parse(text);
+        return LAST_MODIFIED_DATEFORMAT.parse(text, true);
       } catch (e) {
         return null;
       }
     }
     return null;
   }
+
+  _formatLastModified(DateTime lastModified) =>
+   "${ LAST_MODIFIED_DATEFORMAT_WITHOUT_TZ.format(lastModified.toUtc()) } UTC";
+
   _extractFromBody(Completer c, String bucket, String key,
       HttpClientResponseBody body, Resolver resolver) {
     int code = body.statusCode;
@@ -179,6 +193,16 @@ class _HttpClient extends Client {
         request.headers.contentType = req.content.type;
         if (req.vclock != null) {
           request.headers.set(HEADER_VCLOCK, req.vclock);
+        }
+        if (req.ifVtag != null) {
+          request.headers.set(HttpHeaders.IF_MATCH, req.ifVtag);
+        }
+        if (req.ifUnmodifiedSince != null) {
+          request.headers.set(HttpHeaders.IF_UNMODIFIED_SINCE,
+              _formatLastModified(req.ifUnmodifiedSince));
+        }
+        if (req.ifNew != null && req.ifNew) {
+          request.headers.set(HttpHeaders.IF_NONE_MATCH, "*");
         }
         if (req.content.header != null) {
           _mapHeaderMeta(request.headers, req.content.header, "X-Riak-Meta-");
