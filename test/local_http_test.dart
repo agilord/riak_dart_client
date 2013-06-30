@@ -239,9 +239,14 @@ class LocalHttpTest {
               vclock1 = obj.vclock;
               expect(vclock1, isNotNull);
               return Future.wait([
-                  obj.store(new riak.Content.text("2 5")),
-                  obj.store(new riak.Content.text("3 5 7")),
-                  obj.store(new riak.Content.text("5 8")),
+                  // We need to set "ignoreChanges: true" in order to force
+                  // sibling creation.
+                  obj.store(
+                      new riak.Content.text("2 5"), ignoreChanges: true),
+                  obj.store(
+                      new riak.Content.text("3 5 7"), ignoreChanges: true),
+                  obj.store(
+                      new riak.Content.text("5 8"), ignoreChanges: true),
                   ]);
             })
             .then((List<riak.Response> responses) {
@@ -269,6 +274,78 @@ class LocalHttpTest {
             .then((response) {
               expect(response.success, true);
               return bucket.setProps(null);
+            })
+            .then((response) {
+              expect(response.success, true);
+            });
+        expect(f, completes);
+      });
+
+      test('conditional store and fetch', () {
+        riak.Object obj1;
+        var fullQuorum = new riak.Quorum.store(w: riak.Quorum.ALL,
+            dw: riak.Quorum.ALL, pw: riak.Quorum.ALL);
+        Future f = bucket.fetch("k6")
+            .then((response) {
+              if (!config.skipDataCheck) {
+                expect(response.success, false);
+              }
+              return bucket.store("k6", new riak.Content.text("start"),
+                  ifNew: true, returnBody: true, quorum: fullQuorum);
+            })
+            .then((response) {
+              expect(response.success, true);
+              riak.Object obj = response.result;
+              expect(obj.content.asText, "start");
+              expect(obj.vclock, isNotNull);
+              expect(obj.vtag, isNotNull);
+              expect(obj.lastModified, isNotNull);
+              obj1 = obj;
+              return obj.reload();
+            })
+            .then((response) {
+              expect(response.success, true);
+              expect(response.code, HttpStatus.NOT_MODIFIED);
+              riak.Object obj = response.result;
+              expect(obj.content, isNull);
+              return bucket.store("k6", new riak.Content.text("second start"),
+                  ifNew: true);
+            })
+            .then((response) {
+              expect(response.success, false);
+              expect(response.code, HttpStatus.PRECONDITION_FAILED);
+              return bucket.fetch("k6");
+            })
+            .then((response) {
+              expect(response.success, true);
+              riak.Object obj = response.result;
+              expect(obj.content.asText, "start");
+              expect(obj.vclock, obj1.vclock);
+              expect(obj.vtag, obj1.vtag);
+              expect(obj.lastModified, obj1.lastModified);
+              return obj1.store(new riak.Content.text("modified"),
+                  quorum: fullQuorum);
+            })
+            .then((response) {
+              expect(response.success, true);
+              return bucket.fetch("k6");
+            })
+            .then((response) {
+              expect(response.success, true);
+              riak.Object obj2 = response.result;
+              expect(obj2.content.asText, "modified");
+              expect(obj2.vclock, isNot(obj1.vclock));
+              expect(obj2.vtag, isNot(obj1.vtag));
+              return obj1.reload();
+            })
+            .then((response) {
+              expect(response.success, true);
+              expect(response.code, HttpStatus.OK);
+              riak.Object obj2 = response.result;
+              expect(obj2.content.asText, "modified");
+              expect(obj2.vclock, isNot(obj1.vclock));
+              expect(obj2.vtag, isNot(obj1.vtag));
+              return deleteKey("k6");
             })
             .then((response) {
               expect(response.success, true);

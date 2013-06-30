@@ -29,13 +29,15 @@ class FetchRequest {
   final String key;
   final Quorum quorum;
   final Resolver resolver;
+  final String ifNotVtag;
+  final DateTime ifModifiedSince;
 
   /*
   final String vclock;
   bool head;*/
 
   FetchRequest(this.bucket, this.key,
-      { /* this.vclock, */ this.quorum, this.resolver });
+      { this.quorum, this.resolver, this.ifNotVtag, this.ifModifiedSince });
 }
 
 class StoreRequest {
@@ -46,9 +48,13 @@ class StoreRequest {
   final Quorum quorum;
   final bool returnBody;
   final Resolver resolver;
+  final bool ifNew;
+  final String ifVtag;
+  final DateTime ifUnmodifiedSince;
 
   StoreRequest(this.bucket, this.key, this.content,
-      { this.vclock, this.quorum, this.returnBody, this.resolver });
+      { this.vclock, this.quorum, this.returnBody, this.resolver,
+        this.ifNew, this.ifVtag, this.ifUnmodifiedSince });
 }
 
 class IndexRequest {
