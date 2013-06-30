@@ -96,16 +96,20 @@ class Bucket {
 
   /** Fetch an object. */
   Future<Response<Object>> fetch(String key,
-      { Quorum quorum, Resolver resolver }) =>
-          client.fetch(new FetchRequest(name, key,
-              quorum: quorum, resolver: _resolver(resolver) ));
+      { Quorum quorum, Resolver resolver, String ifNotVtag,
+        DateTime ifModifiedSince }) =>
+            client.fetch(new FetchRequest(name, key,
+                quorum: quorum, resolver: _resolver(resolver),
+                ifNotVtag: ifNotVtag, ifModifiedSince: ifModifiedSince ));
 
   /** Store or update an object. */
   Future<Response<Object>> store(String key, Content content,
-      { String vclock, Quorum quorum, bool returnBody, Resolver resolver }) =>
-          client.store(new StoreRequest(name, key, content, vclock: vclock ,
-              quorum: quorum , returnBody: returnBody,
-              resolver: _resolver(resolver) ));
+      { String vclock, Quorum quorum, bool returnBody, Resolver resolver,
+        bool ifNew, String ifVtag, DateTime ifUnmodifiedSince }) =>
+            client.store(new StoreRequest(name, key, content, vclock: vclock,
+                quorum: quorum , returnBody: returnBody,
+                resolver: _resolver(resolver), ifNew: ifNew, ifVtag: ifVtag,
+                ifUnmodifiedSince: ifUnmodifiedSince));
 
   /** Delete an object. */
   Future<Response> delete(String key, { String vclock, Quorum quorum }) =>
@@ -196,16 +200,23 @@ class Object implements ObjectHeader {
   Object(this.bucket, this.key, this.vclock, this.content, this.vtag,
       this.lastModified);
 
+  /** Conditionally reloads the entry with the vtag. */
+  Future<Response<Object>> reload() =>
+      bucket.fetch(key, ifNotVtag: vtag);
+
   /** Delete the entry (and use the vclock to reference the version). */
   Future<Response> delete({ Quorum quorum }) =>
       bucket.delete(key, vclock:vclock, quorum:quorum);
 
   /** Update the entry (and use the vclock to reference the version). */
   Future<Response<Object>> store(Content content,
-      { Quorum quorum, bool returnBody, Resolver resolver }) =>
-          bucket.store(key, content,
-              vclock: vclock, quorum: quorum, returnBody: returnBody,
-              resolver: resolver );
+      { Quorum quorum, bool returnBody, Resolver resolver,
+        bool ignoreChanges: false }) =>
+            bucket.store(key, content,
+                vclock: vclock, quorum: quorum, returnBody: returnBody,
+                resolver: resolver,
+                ifVtag: (ignoreChanges ? null : vtag),
+                ifUnmodifiedSince: (ignoreChanges ? null : lastModified));
 }
 
 /**
