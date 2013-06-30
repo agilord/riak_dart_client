@@ -154,6 +154,12 @@ abstract class ObjectHeader {
 
   /** The vector clock value as returned by the server. */
   String get vclock;
+
+  /** The version tag (HTTP ETag) of the object. */
+  String get vtag;
+
+  /** The last modified timestamp. */
+  DateTime get lastModified;
 }
 
 /**
@@ -175,13 +181,20 @@ class Object implements ObjectHeader {
   /** The content of the entry. */
   final Content content;
 
+  /** The version tag (HTTP ETag) of the object. */
+  final String vtag;
+
+  /** The last modified timestamp. */
+  final DateTime lastModified;
+
   /** The bucket's name. */
   String get bucketName => bucket.name;
 
   /** Reference to the client that is associated with the object. */
   Client get client     => bucket.client;
 
-  Object(this.bucket, this.key, this.vclock, this.content);
+  Object(this.bucket, this.key, this.vclock, this.content, this.vtag,
+      this.lastModified);
 
   /** Delete the entry (and use the vclock to reference the version). */
   Future<Response> delete({ Quorum quorum }) =>

@@ -26,6 +26,9 @@ class LocalHttpTest {
     group('Riak HTTP: ', () {
 
       test('simple run', () {
+        var vtag1 = null;
+        DateTime lastModified1 = null;
+
         Future f = client.listBuckets().toList()
             .then((buckets) {
               if (!config.skipDataCheck) {
@@ -46,7 +49,13 @@ class LocalHttpTest {
             .then((response) {
               expect(response.success, true);
               riak.Object obj = response.result;
+              vtag1 = obj.vtag;
+              lastModified1 = obj.lastModified;
               expect(obj.content.asJson["x"], 1);
+              expect(obj.vtag, isNotNull);
+              expect(obj.lastModified, isNotNull);
+              DateTime now = new DateTime.now();
+              expect(now.difference(obj.lastModified).inSeconds, lessThan(15));
               return obj.store(new riak.Content.json({"x":2}));
             })
             .then((response) {
@@ -70,6 +79,12 @@ class LocalHttpTest {
             .then((response) {
               expect(response.success, true);
               riak.Object obj = response.result;
+              expect(obj.vtag, isNotNull);
+              expect(obj.vtag, isNot(vtag1));
+              expect(obj.lastModified, isNotNull);
+              expect(
+                  lastModified1.difference(obj.lastModified).inSeconds,
+                  lessThan(15));
               expect(obj.content.asJson["x"], 3);
               return obj.delete(); // testing delete, will not keep data
             })
