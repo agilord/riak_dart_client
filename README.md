@@ -6,9 +6,10 @@ Riak database client, written in Dart.
 ## Features
 
 Available Riak functionality:
-- Fetch, store and delete objects (with vclock conditionals)
-- Store and query secondary index
-- Get and set bucket properties
+- fetch, store and delete objects (with vclock conditionals)
+- store and query secondary index
+- get and set bucket properties
+- resolve conflicts if multiple parallel write produces siblings
 
 Dart client design goals:
 - Meaningful wrapper objects
@@ -19,18 +20,19 @@ Dart client design goals:
 0.6
 - conflict resolution of multiple entries (allow_mult)
 - CRDT (commutative replicated data type) example
-- configurable retry-on-failure
+- ETag, Not-Modified-Since support
 
 0.7
+- configurable retry-on-failure
 - robust stream handling (e.g. what to do on backend failure, re-start?)
 - non-buffered HTTP response processing
 - pooling client (simple round-robin)
-- mock backend for testing (in-memory and filesystem)
 
 0.8
 - map-reduce support
 - link-walking support
 - list-resources support
+- mock backend for testing (in-memory and filesystem)
 
 0.9
 - protobuf client implementation
@@ -43,6 +45,14 @@ Dart client design goals:
 
 The order might vary, depending on the contributor's requirements. If you would
 like to add something, contact us (see AUTHORS or pubspec file).
+
+## Migration guide
+
+0.4 -> 0.5
+- full API changed
+
+0.5 -> 0.6
+- no breaking change (yet)
 
 ## References
 

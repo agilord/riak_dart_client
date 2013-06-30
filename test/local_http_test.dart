@@ -195,6 +195,71 @@ class LocalHttpTest {
             });
         expect(f, completes);
       });
+
+      // We store a simplified Set<int> in the content body as text. The initial
+      // value is just a single item (5), and in three parallel writes we add an
+      // extra (2), (3, 7) and (8) separately. As we are using the same vclock
+      // reference, these will cause Riak to create siblings.
+      // On reading the value back, we will use a fetch-specific Resolver to
+      // merge the values and check for (2, 3, 5, 7, 8). Production clients
+      // should set the resolvers on the client or bucket level.
+      test('conflicts', () {
+        var vclock1;
+        Future f = bucket.fetch("k5")
+            .then((response) {
+              if (!config.skipDataCheck) {
+                expect(response.success, false);
+              }
+              return bucket.setProps(new riak.BucketProps(
+                  allow_mult: true, last_write_wins: false));
+            })
+            .then((response) {
+              expect(response.success, true);
+              return bucket.store("k5",
+                  new riak.Content.text("5"), returnBody: true);
+            })
+            .then((response) {
+              expect(response.success, true);
+              riak.Object obj = response.result;
+              vclock1 = obj.vclock;
+              expect(vclock1, isNotNull);
+              return Future.wait([
+                  obj.store(new riak.Content.text("2 5")),
+                  obj.store(new riak.Content.text("3 5 7")),
+                  obj.store(new riak.Content.text("5 8")),
+                  ]);
+            })
+            .then((List<riak.Response> responses) {
+              expect(responses.length, 3);
+              expect(responses[0].success, true);
+              expect(responses[1].success, true);
+              expect(responses[2].success, true);
+              return bucket.fetch("k5",
+                  resolver: new riak.Resolver.merge((header, a, b) {
+                    Set set = new Set();
+                    set.addAll(a.asText.split(" "));
+                    set.addAll(b.asText.split(" "));
+                    List list = new List.from(set.map((s) => int.parse(s)));
+                    return new riak.Content.text((list..sort()).join(" "));
+                  }));
+            })
+            .then((response) {
+              expect(response.success, true);
+              riak.Object obj = response.result;
+              expect(obj.vclock, isNotNull);
+              expect(obj.vclock != vclock1, true);
+              expect(obj.content.asText, "2 3 5 7 8");
+              return deleteKey("k5");
+            })
+            .then((response) {
+              expect(response.success, true);
+              return bucket.setProps(null);
+            })
+            .then((response) {
+              expect(response.success, true);
+            });
+        expect(f, completes);
+      });
     });
   }
 }
