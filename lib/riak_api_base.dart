@@ -258,25 +258,26 @@ class Index<T> {
 /** Collection of the bucket properties. */
 class BucketProps {
 
-  /** Number of replicas. */
-  final int n_val;
+  /** Number of replicas. (Riak's n_val field). */
+  final int replicas;
 
-  /** Allow multiple versions of an entry. Requires conflict-resolution. */
-  final bool allow_mult;
+  /**
+   * Allow multiple versions of an entry. Requires conflict-resolution.
+   * (Riak's allow_mult field.)
+   */
+  final bool allowSiblings;
 
-  /** Ignores vector clock, uses timestamp to elect conflict-winner instead. */
-  final bool last_write_wins;
+  /**
+   * Ignores vector clock, uses timestamp to elect conflict-winner instead.
+   * (Riak's last_write_wins field.)
+   */
+  final bool lastWriteWins;
 
   /** Quorum settings. */
   final Quorum quorum;
 
-  int get replicas => n_val;
-
   BucketProps({
-    int n_val, int replicas,
-    this.allow_mult, this.last_write_wins, this.quorum
-  }) :
-    this.n_val = n_val == null ? replicas : n_val;
+    this.replicas, this.allowSiblings, this.lastWriteWins, this.quorum });
 }
 
 /** Quorum settings for various operations. */
@@ -291,11 +292,15 @@ class Quorum {
   final dynamic pr;
   final dynamic pw;
   final dynamic dw;
-  final bool basic_quorum;
-  final bool not_found_ok;
+
+  /** Riak's basic_quorum field. */
+  final bool basicQuorum;
+
+  /** Riak's not_found_ok field. */
+  final bool notFoundIsSuccess;
 
   Quorum({ this.rw, this.r, this.w, this.pr, this.pw, this.dw,
-    this.basic_quorum, this.not_found_ok });
+    this.basicQuorum, this.notFoundIsSuccess });
 
   factory Quorum.delete({
     dynamic rw, dynamic replicas,
@@ -320,8 +325,8 @@ class Quorum {
   }) => new Quorum(
     r  : _or(r,  read),
     pr : _or(pr, primaryRead),
-    basic_quorum:basic_quorum,
-    not_found_ok:not_found_ok);
+    basicQuorum: basic_quorum,
+    notFoundIsSuccess: not_found_ok);
 
   factory Quorum.store({
     dynamic w, dynamic write,

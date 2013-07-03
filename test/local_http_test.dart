@@ -161,6 +161,7 @@ class LocalHttpTest {
               return obj.content.asStream.toList();
             })
             .then((content) {
+              new riak.BucketProps(replicas: 2);
               expect(content, hasLength(
                   localFile("../lib/riak_client.dart").lengthSync()));
               expect(content,
@@ -186,15 +187,15 @@ class LocalHttpTest {
               return bucket.getProps();
             })
             .then((props) {
-              expect(props.allow_mult, false);
-              return bucket.setProps(new riak.BucketProps(allow_mult:true));
+              expect(props.allowSiblings, false);
+              return bucket.setProps(new riak.BucketProps(allowSiblings: true));
             })
             .then((response) {
               expect(response.success, true);
               return bucket.getProps();
             })
             .then((props) {
-              expect(props.allow_mult, true);
+              expect(props.allowSiblings, true);
               return bucket.setProps(null); // reset
             })
             .then((response) {
@@ -202,7 +203,7 @@ class LocalHttpTest {
               return bucket.getProps();
             })
             .then((props) {
-              expect(props.allow_mult, false);
+              expect(props.allowSiblings, false);
               return deleteKey("k4");
             })
             .then((response) {
@@ -226,7 +227,7 @@ class LocalHttpTest {
                 expect(response.success, false);
               }
               return bucket.setProps(new riak.BucketProps(
-                  allow_mult: true, last_write_wins: false));
+                  allowSiblings: true, lastWriteWins: false));
             })
             .then((response) {
               expect(response.success, true);

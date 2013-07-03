@@ -9,7 +9,7 @@ Available Riak functionality:
 - fetch, store and delete objects (with vclock, vtag and last modified preconditions)
 - store and query secondary index
 - get and set bucket properties
-- resolve conflicts if multiple parallel write produces siblings
+- resolve conflicts if parallel writes produce siblings
 
 Dart client design goals:
 - Meaningful wrapper objects
@@ -52,7 +52,10 @@ like to add something, contact us (see AUTHORS or pubspec file).
 - full API changed
 
 0.5 -> 0.6
-- no breaking change (yet)
+- Renamed BucketProps's fields to follow the Dart conventions (n_val ->
+  replicas, allow_mult -> allowSiblings, last_write_wins -> lastWriteWins).
+- Renamed Quorum's fields to follow the Dart conventions (basic_quorum ->
+  basicQuorum, not_found_ok -> notFoundIsSuccess).
 
 ## References
 
