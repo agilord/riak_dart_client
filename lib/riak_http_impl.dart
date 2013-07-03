@@ -334,9 +334,9 @@ class _HttpClient extends Client {
         // request.encoding = Encoding.UTF_8;
         request.headers.contentType = MediaType.JSON;
         Map m = _nonNullMap({
-          'n_val'     : props.n_val,
-          'allow_mult': props.allow_mult,
-          'last_write_wins': props.last_write_wins
+          'n_val'     : props.replicas,
+          'allow_mult': props.allowSiblings,
+          'last_write_wins': props.lastWriteWins
         });
         if (props.quorum != null) {
           m = _nonNullMap({
@@ -369,9 +369,9 @@ class _HttpClient extends Client {
       .then((HttpClientResponseBody body) {
         Map m = body.body['props'];
         c.complete(new BucketProps(
-            n_val:      m['n_val'],
-            allow_mult: m['allow_mult'],
-            last_write_wins: m['last_write_wins'],
+            replicas:      m['n_val'],
+            allowSiblings: m['allow_mult'],
+            lastWriteWins: m['last_write_wins'],
             quorum: new Quorum.bucket(
                 rw: m['rw'],
                 r:  m['r'],
@@ -427,8 +427,8 @@ class _HttpClient extends Client {
       "pr" : q.pr,
       "pw" : q.pw,
       "dw" : q.dw,
-      "basic_quorum" : q.basic_quorum,
-      "not_found_ok" : q.not_found_ok
+      "basic_quorum" : q.basicQuorum,
+      "not_found_ok" : q.notFoundIsSuccess
     };
     return _nonNullMap(m, map);
   }

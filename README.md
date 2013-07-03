@@ -9,18 +9,13 @@ Available Riak functionality:
 - fetch, store and delete objects (with vclock, vtag and last modified preconditions)
 - store and query secondary index
 - get and set bucket properties
-- resolve conflicts if multiple parallel write produces siblings
+- resolve conflicts if parallel writes produce siblings
 
 Dart client design goals:
 - Meaningful wrapper objects
 - Immutable structures (exception: JSON content, but changes won't be pushed)
 
 ## Roadmap
-
-0.6
-- conflict resolution of multiple entries (allow_mult)
-- CRDT (commutative replicated data type) example
-- ETag, If-Unmodified-Since support
 
 0.7
 - configurable retry-on-failure
@@ -52,7 +47,10 @@ like to add something, contact us (see AUTHORS or pubspec file).
 - full API changed
 
 0.5 -> 0.6
-- no breaking change (yet)
+- Renamed BucketProps's fields to follow the Dart conventions (n_val ->
+  replicas, allow_mult -> allowSiblings, last_write_wins -> lastWriteWins).
+- Renamed Quorum's fields to follow the Dart conventions (basic_quorum ->
+  basicQuorum, not_found_ok -> notFoundIsSuccess).
 
 ## References
 

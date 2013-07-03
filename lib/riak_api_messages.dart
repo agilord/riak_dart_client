@@ -21,7 +21,17 @@ class DeleteRequest {
   final String vclock;
   final Quorum quorum;
 
-  DeleteRequest(this.bucket, this.key, { this.vclock, this.quorum });
+  DeleteRequest(this.bucket, this.key,
+      {
+        /**
+         * The vclock of the previously read value.
+         */
+        this.vclock,
+
+        /**
+         * The requested quorum if not using the bucket's default values.
+        */
+        this.quorum });
 }
 
 class FetchRequest {
@@ -37,7 +47,29 @@ class FetchRequest {
   bool head;*/
 
   FetchRequest(this.bucket, this.key,
-      { this.quorum, this.resolver, this.ifNotVtag, this.ifModifiedSince });
+      {
+        /**
+         * The requested quorum if not using the bucket's default values.
+         */
+        this.quorum,
+
+        /**
+         * Conflict resolver - if the fetched object might have siblings.
+         * Will use the bucket's resolver if not specified.
+         */
+        this.resolver,
+
+        /**
+         * Fetch the entry only if the content has changed since the previously
+         * read vtag value.
+         */
+        this.ifNotVtag,
+
+        /**
+         * Fetch the entry only if the content has changed since the specified
+         * date.
+         */
+        this.ifModifiedSince });
 }
 
 class StoreRequest {
@@ -53,8 +85,44 @@ class StoreRequest {
   final DateTime ifUnmodifiedSince;
 
   StoreRequest(this.bucket, this.key, this.content,
-      { this.vclock, this.quorum, this.returnBody, this.resolver,
-        this.ifNew, this.ifVtag, this.ifUnmodifiedSince });
+      {
+        /**
+         * The vclock of the previously read value.
+         */
+        this.vclock,
+
+        /**
+         * The requested quorum if not using the bucket's default values.
+         */
+        this.quorum,
+
+        /**
+         * Should return the stored object?
+         */
+        this.returnBody: false,
+
+        /**
+         * Conflict resolver - if the stored object might have siblings.
+         * Will use the bucket's resolver if not specified.
+         */
+        this.resolver,
+
+        /**
+         * Store only if there is no other entry with this key.
+         */
+        this.ifNew,
+
+        /**
+         * Update the entry only if the content has the previously read vtag
+         * value (== unchanged)
+         */
+        this.ifVtag,
+
+        /**
+         * Update the entry only if the content is not modified since the
+         * specified date.
+         */
+        this.ifUnmodifiedSince });
 }
 
 class IndexRequest {
