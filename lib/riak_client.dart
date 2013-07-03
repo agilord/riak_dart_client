@@ -2,8 +2,8 @@
 // All rights reserved. Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// version:       0.5.1
-// last-modified: 2013-06-22
+// version:       0.6.0
+// last-modified: 2013-07-02
 
 library riak_client;
 

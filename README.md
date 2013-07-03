@@ -17,11 +17,6 @@ Dart client design goals:
 
 ## Roadmap
 
-0.6
-- conflict resolution of multiple entries (allow_mult)
-- CRDT (commutative replicated data type) example
-- ETag, If-Unmodified-Since support
-
 0.7
 - configurable retry-on-failure
 - robust stream handling (e.g. what to do on backend failure, re-start?)
