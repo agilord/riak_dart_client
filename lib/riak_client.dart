@@ -25,3 +25,6 @@ part 'riak_api_messages.dart';
 
 /* HTTP client implementation */
 part 'riak_http_impl.dart';
+
+/* Monitoring proxy client implementation */
+part 'riak_monitor_impl.dart';
