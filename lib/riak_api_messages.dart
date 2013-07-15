@@ -143,3 +143,18 @@ class IndexRequest {
 
   IndexRequest(this.bucket, this.index, this.start, [this.end]);
 }
+
+class FetchCounterRequest {
+  final String bucket;
+  final String counter;
+
+  FetchCounterRequest(this.bucket, this.counter);
+}
+
+class IncrementCounterRequest {
+  final String bucket;
+  final String counter;
+  final int amount;
+
+  IncrementCounterRequest(this.bucket, this.counter, this.amount);
+}

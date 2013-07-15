@@ -10,6 +10,7 @@ Available Riak functionality:
 - store and query secondary index
 - get and set bucket properties
 - resolve conflicts if parallel writes produce siblings
+- counters (fetch, increment/decrement)
 
 Dart client design goals:
 - Meaningful wrapper objects
@@ -18,21 +19,21 @@ Dart client design goals:
 ## Roadmap
 
 0.7
+- map-reduce support
+- link-walking support
+- list-resources support
+
+0.8
+- protobuf client implementation
+- mixed client (protobuf / http, based on the request)
+- search support
+
+0.9
+- mock backend for testing (in-memory and filesystem)
 - configurable retry-on-failure
 - robust stream handling (e.g. what to do on backend failure, re-start?)
 - non-buffered HTTP response processing
 - pooling client (simple round-robin)
-
-0.8
-- map-reduce support
-- link-walking support
-- list-resources support
-- mock backend for testing (in-memory and filesystem)
-
-0.9
-- protobuf client implementation
-- mixed client (protobuf / http, based on the request)
-- search support
 
 1.0
 - stable API
