@@ -11,8 +11,8 @@ abstract class Client {
   Future<Response> ping();
 
   /** Creates a new Bucket object */
-  Bucket getBucket(String name, { Resolver resolver }) =>
-      new Bucket(this, name, resolver: _resolver(name, resolver));
+  Bucket getBucket(String bucket, { Resolver resolver }) =>
+      new Bucket(this, bucket, resolver: _resolver(bucket, resolver));
 
   /** List all the buckets. Might be a slow operation on large Riak setups. */
   Stream<String> listBuckets();
@@ -46,6 +46,12 @@ abstract class Client {
    * Might be a slow operation on large Riak setups.
    */
   Stream<String> queryIndex(IndexRequest req);
+
+  /** Returns the counter's value. */
+  Future<Response<int>> fetchCounter(FetchCounterRequest req);
+
+  /** Increments the counter's value with the specified amount. */
+  Future<Response> incrementCounter(IncrementCounterRequest req);
 
   /** Creates a new client based on the Riak HTTP API. */
   factory Client.http(String host, int port) => new _HttpClient(host, port);
@@ -138,6 +144,25 @@ class Bucket {
    */
   Index<String> getKeyIndex() => getStringIndex("\$key");
 
+  /** Creates a new Counter object. */
+  Counter getCounter(String counter) =>
+      new Counter(client, this, counter);
+
+  /** Returns the counter's value. */
+  Future<Response<int>> fetchCounter(String counter) =>
+      client.fetchCounter(new FetchCounterRequest(this.name, counter));
+
+  /** Increments the counter's value with the specified amount. */
+  Future<Response> incrementCounter(
+      String counter, { int amount: 1 }) =>
+          client.incrementCounter(
+              new IncrementCounterRequest(this.name, counter, amount));
+
+  /** Decrements the counter's value with the specified amount. */
+  Future<Response> decrementCounter(
+      String counter, { int amount: 1 }) =>
+          incrementCounter(counter, amount: -amount);
+
   Resolver _resolver(Resolver provided) =>
       provided != null ? provided : this.resolver;
 }
@@ -225,7 +250,7 @@ class Object implements ObjectHeader {
  */
 class Index<T> {
 
-  /** Reference to the client that is associated with the client. */
+  /** Reference to the client that is associated with the index. */
   final Client client;
 
   /** Reference to the bucket that is associated with the index. */
@@ -361,4 +386,34 @@ class Quorum {
   }
 
   static _or(dynamic code, dynamic alias) => code == null ? alias : code;
+}
+
+/**
+ * Counters are a CRDT (convergent replicated data type) that eventually
+ * converge to the correct total.
+ */
+class Counter {
+
+  /** Reference to the client that is associated with the counter. */
+  final Client client;
+
+  /** Reference to the bucket that is associated with the counter. */
+  final Bucket bucket;
+
+  /** The name of the counter. */
+  final String name;
+
+  Counter(this.client, this.bucket, this.name);
+
+  /** Returns the counter's value. */
+  Future<Response<int>> fetch() =>
+      bucket.fetchCounter(name);
+
+  /** Increments the counter's value with the specified amount. */
+  Future<Response> increment({ int amount: 1 }) =>
+      bucket.incrementCounter(name, amount: amount);
+
+  /** Decrements the counter's value with the specified amount. */
+  Future<Response> decrement({ int amount: 1 }) =>
+      increment(amount: -amount);
 }
