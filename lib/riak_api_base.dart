@@ -11,8 +11,8 @@ abstract class Client {
   Future<Response> ping();
 
   /** Creates a new Bucket object */
-  Bucket getBucket(String name, { Resolver resolver }) =>
-      new Bucket(this, name, resolver: _resolver(name, resolver));
+  Bucket getBucket(String bucket, { Resolver resolver }) =>
+      new Bucket(this, bucket, resolver: _resolver(bucket, resolver));
 
   /** List all the buckets. Might be a slow operation on large Riak setups. */
   Stream<String> listBuckets();
