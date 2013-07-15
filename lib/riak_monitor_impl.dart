@@ -88,4 +88,12 @@ class _MonitoringClientProxy extends Client {
   Stream<String> queryIndex(IndexRequest req) =>
       _proxyStream([ "queryIndex", req.bucket, req.index ],
           () => _client.queryIndex(req));
+
+  Future<Response<int>> fetchCounter(FetchCounterRequest req) =>
+      _proxyFuture([ "fetchCounter", req.bucket ],
+          () => _client.fetchCounter(req));
+
+  Future<Response<int>> incrementCounter(IncrementCounterRequest req) =>
+      _proxyFuture([ "incrementCounter", req.bucket ],
+          () => _client.incrementCounter(req));
 }

@@ -39,7 +39,8 @@ class _HttpClient extends Client {
     return c.future;
   }
 
-  Future<Response<Object>> fetch(FetchRequest req, [ String vtag ]) {
+  Future<Response<Object>> fetch(FetchRequest req,
+      { String vtag, String type: "keys" }) {
     var c = new Completer();
     var params = _quorum(req.quorum);
     // TODO: Decide if vtag can be part of the normal fetch request. If it does,
@@ -49,7 +50,7 @@ class _HttpClient extends Client {
       params["vtag"] = vtag;
     }
     _openUri("get",
-        "/buckets/${_uri(req.bucket)}/keys/${_uri(req.key)}", params)
+        "/buckets/${_uri(req.bucket)}/$type/${_uri(req.key)}", params)
       .then((HttpClientRequest request) {
         if (req.ifNotVtag != null) {
           request.headers.set(HttpHeaders.IF_NONE_MATCH, req.ifNotVtag);
@@ -139,7 +140,7 @@ class _HttpClient extends Client {
 
       StreamController siblings = new StreamController(sync: true);
       vtags.forEach((vtag) {
-        fetch(new FetchRequest(bucket, key, resolver: resolver), vtag)
+        fetch(new FetchRequest(bucket, key, resolver: resolver), vtag: vtag)
           .then((Response response) {
             if (response.success) {
               siblings.add(response.result);
@@ -177,7 +178,8 @@ class _HttpClient extends Client {
     }
   }
 
-  Future<Response<Object>> store(StoreRequest req) {
+  Future<Response<Object>> store(StoreRequest req,
+      { String type: "keys", String method: "put" }) {
     var c = new Completer();
     var params = _quorum(req.quorum);
     bool returnBody = req.returnBody != null && req.returnBody;
@@ -186,9 +188,9 @@ class _HttpClient extends Client {
       params["returnbody"] = "true";
     }
     String path = req.key == null ?
-        "/buckets/${_uri(req.bucket)}/keys" :
-        "/buckets/${_uri(req.bucket)}/keys/${_uri(req.key)}";
-    Future f = _openUri("put", path, params)
+        "/buckets/${_uri(req.bucket)}/$type" :
+        "/buckets/${_uri(req.bucket)}/$type/${_uri(req.key)}";
+    Future f = _openUri(method, path, params)
       .then((HttpClientRequest request) {
         request.headers.contentType = req.content.type;
         if (req.vclock != null) {
@@ -404,6 +406,36 @@ class _HttpClient extends Client {
         sc.addError(e);
       });
     return sc.stream;
+  }
+
+  Future<Response<int>> fetchCounter(FetchCounterRequest req) {
+    var c = new Completer();
+    var f = fetch(new FetchRequest(req.bucket, req.counter), type: "counters");
+    f.then((response) {
+      var result = null;
+      if (response.success) {
+        result = int.parse(response.result.content.asText);
+      }
+      c.complete(new Response(response.code, response.success, result));
+    })
+    .catchError((e) {
+      c.completeError(e);
+    });
+    return c.future;
+  }
+
+  Future<Response> incrementCounter(IncrementCounterRequest req) {
+    var c = new Completer();
+    var f = store(new StoreRequest(req.bucket, req.counter,
+        new Content.text(req.amount.toString())),
+        type: "counters", method: "post");
+    f.then((response) {
+      c.complete(new Response(response.code, response.success));
+    })
+    .catchError((e) {
+      c.completeError(e);
+    });
+    return c.future;
   }
 
   Future<HttpClientRequest> _openUri(String method, String path, [Map params]) {

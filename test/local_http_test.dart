@@ -353,6 +353,50 @@ class LocalHttpTest {
             });
         expect(f, completes);
       });
+
+      test('counters', () {
+        riak.Counter counter = bucket.getCounter("k7");
+        int offset = 0;
+        Future f = counter.fetch()
+            .then((response) {
+              if (!config.skipDataCheck) {
+                expect(response.result, isNull);
+              } else {
+                offset = response.result;
+              }
+              return bucket.setProps(new riak.BucketProps(allowSiblings: true));
+            })
+            .then((response) {
+              expect(response.success, true);
+              return counter.increment(amount: 10);
+            })
+            .then((response) {
+              expect(response.success, true);
+              return Future.wait([
+                  counter.increment(),
+                  counter.decrement(amount: 9),
+                  counter.decrement(amount: 2) ]);
+            })
+            .then((List<riak.Response> responses) {
+              expect(responses.length, 3);
+              expect(responses[0].success, true);
+              expect(responses[1].success, true);
+              expect(responses[2].success, true);
+              return counter.fetch();
+            })
+            .then((response) {
+              expect(response.result, offset);
+              return bucket.delete("k7");
+            })
+            .then((response) {
+              expect(response.success, true);
+              return bucket.setProps(null);
+            })
+            .then((response) {
+              expect(response.success, true);
+            });
+        expect(f, completes);
+      });
     });
   }
 }
