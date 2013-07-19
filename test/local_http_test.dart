@@ -405,8 +405,6 @@ class LocalHttpTest {
               return counter.fetch();
             })
             .then((response) {
-              logMessage("Offset: " + offset.toString());
-              logMessage("Result: " + response.result.toString());
               expect(response.result, offset);
               return deleteKey("k7");
             })
