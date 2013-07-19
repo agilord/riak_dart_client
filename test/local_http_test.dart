@@ -19,10 +19,25 @@ class LocalHttpTest {
   }
 
   File localFile(String relativePath) {
-    return new File.fromPath(config.scriptPath.append(relativePath));
+    return new File(config.directory.path + '/' + relativePath);
   }
 
   run() {
+    _cleanUp().then((_) => _run());
+  }
+
+  Future _cleanUp() {
+    return Future.wait([
+        bucket.setProps(null),
+        bucket.delete("k1"),
+        bucket.delete("k2"),
+        bucket.delete("k3"),
+        bucket.delete("k4"),
+        bucket.delete("k6")
+      ]);
+  }
+
+  _run() {
     group('Riak HTTP: ', () {
 
       test('simple run', () {
@@ -226,13 +241,17 @@ class LocalHttpTest {
               if (!config.skipDataCheck) {
                 expect(response.success, false);
               }
+              if (response.success) {
+                riak.Object obj = response.result;
+                vclock1 = obj.vclock;
+              }
               return bucket.setProps(new riak.BucketProps(
                   allowSiblings: true, lastWriteWins: false));
             })
             .then((response) {
               expect(response.success, true);
               return bucket.store("k5",
-                  new riak.Content.text("5"), returnBody: true);
+                  new riak.Content.text("5"), returnBody: true, vclock: vclock1);
             })
             .then((response) {
               expect(response.success, true);
@@ -361,7 +380,8 @@ class LocalHttpTest {
             .then((response) {
               if (!config.skipDataCheck) {
                 expect(response.result, isNull);
-              } else {
+              }
+              if (response.result != null) {
                 offset = response.result;
               }
               return bucket.setProps(new riak.BucketProps(allowSiblings: true));
@@ -385,8 +405,10 @@ class LocalHttpTest {
               return counter.fetch();
             })
             .then((response) {
+              logMessage("Offset: " + offset.toString());
+              logMessage("Result: " + response.result.toString());
               expect(response.result, offset);
-              return bucket.delete("k7");
+              return deleteKey("k7");
             })
             .then((response) {
               expect(response.success, true);
