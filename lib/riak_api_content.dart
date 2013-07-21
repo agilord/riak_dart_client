@@ -166,13 +166,13 @@ class IndexBuilder {
 /** Some date-related helper method. */
 class DateTimeUtils {
 
-  String _d3(int n) {
+  static String _d3(int n) {
     if (n >= 100) { return "$n"; }
     if (n >= 10) { return "0$n"; }
     return "00$n";
   }
 
-  String _d2(int n) {
+  static String _d2(int n) {
     if (n >= 10) { return "$n"; }
     return "0$n";
   }

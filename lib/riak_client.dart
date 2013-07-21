@@ -12,6 +12,7 @@ import 'dart:collection';
 import 'dart:io';
 import 'dart:json' as json;
 
+import 'package:http_server/http_server.dart';
 import 'package:intl/intl.dart';
 
 /* core API classes */

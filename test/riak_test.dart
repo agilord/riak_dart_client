@@ -22,7 +22,8 @@ class TestConfig {
   bool   keepData   = false;
   bool   skipDataCheck = false;
 
-  Path get scriptPath => new Path(new File(new Options().script).directory.path);
+  /// The directory containing the test script being run.
+  Directory get directory => new File(new Options().script).directory;
 
   TestConfig();
   TestConfig.args(List<String> arguments) {
