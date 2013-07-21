@@ -19,7 +19,7 @@ class LocalHttpTest {
   }
 
   File localFile(String relativePath) {
-    return new File(config.directory.path + '/' + relativePath);
+    return new File('${config.directory.path}/$relativePath');
   }
 
   run() {
