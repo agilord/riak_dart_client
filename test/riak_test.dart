@@ -8,8 +8,8 @@ import 'package:unittest/unittest.dart';
 import 'package:riak_client/riak_client.dart' as riak;
 part 'local_http_test.dart';
 
-main() {
-  TestConfig config = new TestConfig.args(new Options().arguments);
+main(List<String> args) {
+  TestConfig config = new TestConfig.args(args);
 
   new LocalHttpTest(config).run();
 }
@@ -23,7 +23,7 @@ class TestConfig {
   bool   skipDataCheck = false;
 
   /// The directory containing the test script being run.
-  Directory get directory => new File(new Options().script).directory;
+  Directory get directory => new File(Platform.script.path).parent;
 
   TestConfig();
   TestConfig.args(List<String> arguments) {

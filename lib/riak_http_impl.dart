@@ -95,33 +95,33 @@ class _HttpClient extends Client {
 
   _extractFromBody(Completer c, String bucket, String key,
       HttpClientResponseBody body, Resolver resolver) {
-    int code = body.statusCode;
+    int statusCode = body.response.statusCode;
+    var contentType = body.response.headers.contentType;
     bool success =
-        code == HttpStatus.OK ||
-        code == HttpStatus.NOT_MODIFIED;
+        statusCode == HttpStatus.OK ||
+        statusCode == HttpStatus.NOT_MODIFIED;
 
     Object result = null;
-    String vclock = body.headers.value(HEADER_VCLOCK);
-    String etag = body.headers.value(HttpHeaders.ETAG);
-    DateTime lastmod = _getLastModified(body.headers);
+    String vclock = body.response.headers.value(HEADER_VCLOCK);
+    String etag = body.response.headers.value(HttpHeaders.ETAG);
+    DateTime lastmod = _getLastModified(body.response.headers);
 
-    if (body.statusCode == HttpStatus.NOT_MODIFIED) {
+    if (statusCode == HttpStatus.NOT_MODIFIED) {
       result = new Object(_bucket(bucket), key, vclock, null, etag, lastmod);
-      c.complete(new Response(code, success, result));
-    } else if (body.statusCode == HttpStatus.OK) {
+      c.complete(new Response(statusCode, success, result));
+    } else if (statusCode == HttpStatus.OK) {
       Content content = null;
       if (body.type == "text") {
-        content = new Content.text(body.body, type:body.contentType);
+        content = new Content.text(body.body, type: contentType);
       } else if (body.type == "json") {
         content = new Content.json(body.body);
       } else if (body.type == "binary") {
         content = new Content.stream(
-            new Stream.fromIterable(body.body),
-            type:body.contentType);
+            new Stream.fromIterable(body.body), type: contentType);
       }
       result = new Object(_bucket(bucket), key, vclock, content, etag, lastmod);
-      c.complete(new Response(code, success, result));
-    } else if (body.statusCode == HttpStatus.MULTIPLE_CHOICES) {
+      c.complete(new Response(statusCode, success, result));
+    } else if (statusCode == HttpStatus.MULTIPLE_CHOICES) {
       if (resolver == null) {
         resolver = Resolver.DEFAULT;
       }
@@ -174,7 +174,7 @@ class _HttpClient extends Client {
         c.completeError(e);
       });
     } else {
-      c.complete(new Response(code, success));
+      c.complete(new Response(statusCode, success));
     }
   }
 
@@ -218,7 +218,7 @@ class _HttpClient extends Client {
           return request.close();
         } else if (req.content.format.isJson) {
           // request.encoding = Encoding.UTF_8;
-          request.write(json.stringify(req.content.asJson));
+          request.write(JSON.encode(req.content.asJson));
           return request.close();
         } else if (req.content.format.isStream) {
           return req.content.asStream.pipe(request);
@@ -234,7 +234,7 @@ class _HttpClient extends Client {
             code == HttpStatus.NO_CONTENT;
         if (!returnBody) {
           c.complete(new Response(code, success));
-          return;
+          return null;
         } else {
           return HttpBodyHandler.processResponse(response);
         }
@@ -247,7 +247,7 @@ class _HttpClient extends Client {
         if (req.returnBody) {
           _extractFromBody(c, req.bucket, req.key, body, req.resolver);
         } else {
-          int code = body.statusCode;
+          int code = body.response.statusCode;
           bool success =
               code == HttpStatus.OK ||
               code == HttpStatus.CREATED ||
@@ -348,7 +348,7 @@ class _HttpClient extends Client {
             'dw': props.quorum.dw
           }, m);
         }
-        request.write(json.stringify({ 'props': m }));
+        request.write(JSON.encode({ 'props': m }));
       }
       return request.close();
     })
@@ -450,7 +450,7 @@ class _HttpClient extends Client {
 
   _quorum(Quorum q, [ Map map ]) {
     if (q == null) {
-      return;
+      return null;
     }
     Map m = {
       "rw" : q.rw,
