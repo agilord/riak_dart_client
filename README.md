@@ -16,6 +16,47 @@ Dart client design goals:
 - Meaningful wrapper objects
 - Immutable structures (exception: JSON content, but changes won't be pushed)
 
+## Usage Examples
+
+Create an HTTP client and target a bucket:
+
+    Client client = new Client.http('127.0.0.1', 10017);
+    Bucket exampleBucket = client.getBucket('example');
+
+Fetch a text object:
+
+    String exampleKey = 'text_example_key';
+    exampleBucket.fetch(exampleKey).then((Response value) {
+      String text = value.result.content.asText;
+      ... do something with text ...
+    });
+
+Fetch a JSON object:
+
+    String exampleKey = 'json_example_key';
+    exampleBucket.fetch(exampleKey).then((Response value) {
+      Map json = value.result.content.asJson;
+      ... do something with JSON ...
+    });
+
+Store a text object:
+
+    String key = 'text_message';
+    String message = 'hello from the Dart server';
+    Content content = new Content.text(message);
+    exampleBucket.store(key, content).then((Response response) {
+      ... do something with response ...
+    });
+
+Store a JSON object:
+
+    String key = 'json_message';
+    Map json = { 'foo': 'bar' };
+    Content content = new Content.json(json);
+    exampleBucket.store(key, content).then((Response response) {
+      ... do something with response ...
+    });
+
 ## Roadmap
 
 0.7
