@@ -29,6 +29,7 @@ Fetch a text object:
 
 ```dart
 String exampleKey = 'text_example_key';
+
 exampleBucket.fetch(exampleKey).then((Response value) {
   String text = value.result.content.asText;
   ... do something with text ...
@@ -39,6 +40,7 @@ Fetch a JSON object:
 
 ```dart
 String exampleKey = 'json_example_key';
+
 exampleBucket.fetch(exampleKey).then((Response value) {
   Map json = value.result.content.asJson;
   ... do something with JSON ...
@@ -51,6 +53,7 @@ Store a text object:
 String key = 'text_message';
 String message = 'hello from the Dart server';
 Content content = new Content.text(message);
+
 exampleBucket.store(key, content).then((Response response) {
   ... do something with response ...
 });
@@ -62,9 +65,34 @@ Store a JSON object:
 String key = 'json_message';
 Map json = { 'foo': 'bar' };
 Content content = new Content.json(json);
+
 exampleBucket.store(key, content).then((Response response) {
   ... do something with response ...
 });
+```
+
+List all buckets (not recommended in production environments):
+
+```dart
+List<String> bucketNames = new List<String>();
+
+client.listBuckets().listen((String bucketName) {
+  bucketNames.add(bucketName);
+});
+
+print(bucketNames);
+```
+
+List all keys in a bucket (also not recommended in production environments):
+
+```dart
+List<String> keyNames = new List<String>();
+
+bucket.listKeys().listen((String keyName) {
+  keyNames.add(keyName);
+});
+
+print(keyNames);
 ```
 
 ## Roadmap
