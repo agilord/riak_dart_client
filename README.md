@@ -95,6 +95,22 @@ bucket.listKeys().listen((String keyName) {
 print(keyNames);
 ```
 
+Modify an existing object using a vclock:
+
+```dart
+String key = 'text_message';
+String newMessage = 'this is the most up-to-date message';
+
+exampleBucket.fetch(key).then((Response value) {
+  if (value.code == 200) {
+    String v = value.result.vclock;
+    exampleBucket.store(key, newMessage, vclock: v).then((Response response) {
+      print(res);
+    });
+  }
+});
+```
+
 ## Roadmap
 
 0.7
