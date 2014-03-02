@@ -76,11 +76,9 @@ List all buckets (not recommended in production environments):
 ```dart
 List<String> bucketNames = new List<String>();
 
-client.listBuckets().listen((String bucketName) {
-  bucketNames.add(bucketName);
+client.listBuckets().toList().then((List<String> buckets) {
+  print(buckets);
 });
-
-print(bucketNames);
 ```
 
 List all keys in a bucket (also not recommended in production environments):
@@ -88,11 +86,9 @@ List all keys in a bucket (also not recommended in production environments):
 ```dart
 List<String> keyNames = new List<String>();
 
-bucket.listKeys().listen((String keyName) {
-  keyNames.add(keyName);
+bucket.listKeys().toList().then((List<String> keys) {
+  print(keys);
 });
-
-print(keyNames);
 ```
 
 Modify an existing object using a vclock:
@@ -104,9 +100,12 @@ String newMessage = 'this is the most up-to-date message';
 exampleBucket.fetch(key).then((Response value) {
   if (value.code == 200) {
     String v = value.result.vclock;
-    exampleBucket.store(key, newMessage, vclock: v).then((Response response) {
-      print(res);
+    Content content = new Content.text(newMessage);
+    exampleBucket.store(key, content, vclock: v).then((Response response) {
+      print(response.code);
     });
+  } else {
+    print('Not found');
   }
 });
 ```
