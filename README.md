@@ -16,6 +16,100 @@ Dart client design goals:
 - Meaningful wrapper objects
 - Immutable structures (exception: JSON content, but changes won't be pushed)
 
+## Usage Examples
+
+Create an HTTP client and target a bucket:
+
+```dart
+Client client = new Client.http('127.0.0.1', 10017);
+Bucket exampleBucket = client.getBucket('example');
+```
+
+Fetch a text object:
+
+```dart
+String exampleKey = 'text_example_key';
+
+exampleBucket.fetch(exampleKey).then((Response value) {
+  String text = value.result.content.asText;
+  ... do something with text ...
+});
+```
+
+Fetch a JSON object:
+
+```dart
+String exampleKey = 'json_example_key';
+
+exampleBucket.fetch(exampleKey).then((Response value) {
+  Map json = value.result.content.asJson;
+  ... do something with JSON ...
+});
+```
+
+Store a text object:
+
+```dart
+String key = 'text_message';
+String message = 'hello from the Dart server';
+Content content = new Content.text(message);
+
+exampleBucket.store(key, content).then((Response response) {
+  ... do something with response ...
+});
+```
+
+Store a JSON object:
+
+```dart
+String key = 'json_message';
+Map json = { 'foo': 'bar' };
+Content content = new Content.json(json);
+
+exampleBucket.store(key, content).then((Response response) {
+  ... do something with response ...
+});
+```
+
+List all buckets (not recommended in production environments):
+
+```dart
+List<String> bucketNames = new List<String>();
+
+client.listBuckets().toList().then((List<String> buckets) {
+  print(buckets);
+});
+```
+
+List all keys in a bucket (also not recommended in production environments):
+
+```dart
+List<String> keyNames = new List<String>();
+
+bucket.listKeys().toList().then((List<String> keys) {
+  print(keys);
+});
+```
+
+Modify an existing object using a vclock:
+
+```dart
+String key = 'text_message';
+String newMessage = 'this is the most up-to-date message';
+
+exampleBucket.fetch(key).then((Response value) {
+  if (value.code == 200) {
+    String v = value.result.vclock;
+    Content content = new Content.text(newMessage);
+    exampleBucket.store(key, content, vclock: v).then((Response response) {
+      print(response.code);
+    });
+  } else {
+    print('Not found');
+  }
+});
+```
+
 ## Roadmap
 
 0.7
