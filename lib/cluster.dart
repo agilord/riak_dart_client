@@ -11,8 +11,9 @@ class Node {
   Endpoint _pbEndpoint;
 
   Node(this.host, {this.httpPort: 8098, this.pbPort: 8087}) {
-    _httpEndpoint = new Endpoint(host, httpPort);
-    _pbEndpoint = new Endpoint(host, pbPort);
+    assert(httpPort != null || pbPort != null);
+    _httpEndpoint = httpPort == null ? null : new Endpoint(host, httpPort);
+    _pbEndpoint = pbPort == null ? null : new Endpoint(host, pbPort);
   }
 
   bool operator ==(Node other) =>
@@ -41,8 +42,12 @@ class _Cluster {
     if (_nodes.contains(node)) {
       return;
     }
-    _httpPool.join(node._httpEndpoint);
-    _pbPool.join(node._pbEndpoint);
+    if (node._httpEndpoint != null) {
+      _httpPool.join(node._httpEndpoint);
+    }
+    if (node._pbEndpoint != null) {
+      _pbPool.join(node._pbEndpoint);
+    }
     _nodes.add(node);
   }
 
@@ -50,8 +55,12 @@ class _Cluster {
     if (!_nodes.contains(node)) {
       return;
     }
-    _httpPool.leave(node._httpEndpoint);
-    _pbPool.leave(node._pbEndpoint);
+    if (node._httpEndpoint != null) {
+      _httpPool.leave(node._httpEndpoint);
+    }
+    if (node._pbEndpoint != null) {
+      _pbPool.leave(node._pbEndpoint);
+    }
     _nodes.remove(node);
   }
 
