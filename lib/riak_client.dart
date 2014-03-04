@@ -20,6 +20,10 @@ import 'protos/riak.pb.dart';
 import 'protos/riak_kv.pb.dart';
 import 'protos/riak_search.pb.dart';
 
+import 'ext/connection_pool/connection_pool.dart';
+
+part 'cluster.dart';
+
 /* core API classes */
 part 'riak_api_base.dart';
 

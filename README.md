@@ -74,8 +74,6 @@ exampleBucket.store(key, content).then((Response response) {
 List all buckets (not recommended in production environments):
 
 ```dart
-List<String> bucketNames = new List<String>();
-
 client.listBuckets().toList().then((List<String> buckets) {
   print(buckets);
 });
@@ -84,8 +82,6 @@ client.listBuckets().toList().then((List<String> buckets) {
 List all keys in a bucket (also not recommended in production environments):
 
 ```dart
-List<String> keyNames = new List<String>();
-
 bucket.listKeys().toList().then((List<String> keys) {
   print(keys);
 });
