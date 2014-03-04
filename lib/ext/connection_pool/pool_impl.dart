@@ -38,6 +38,8 @@ class _Pool<T> implements ConnectionPool<T> {
   join(Endpoint endpoint) =>
       _cluster.join(endpoint);
 
+  // TODO: close idles
+  // TODO: cancel open in progress
   leave(Endpoint endpoint) =>
       _cluster.leave(endpoint);
 
