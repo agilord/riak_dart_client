@@ -1,4 +1,4 @@
-// Copyright (c) 2012-2013, the Riak-Dart project authors (see AUTHORS file).
+// Copyright (c) 2012-2014, the Riak-Dart project authors (see AUTHORS file).
 // All rights reserved. Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
