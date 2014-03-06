@@ -25,6 +25,8 @@ class _MonitoringClientProxy extends Client {
       OpMonitor this.monitorProvider(List<String> path, bool isStream))
         : super._(null);
 
+  Future close() => _client.close();
+
   Future _proxyFuture(List<String> path, Future op()) {
     OpMonitor monitor = monitorProvider(path, false);
     var c = new Completer();

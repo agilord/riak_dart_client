@@ -41,10 +41,16 @@ class Connection<T> {
   Connection(this.endpoint, this.connection, this._return);
 
   void complete() {
+    if (_return.isCompleted) {
+      return;
+    }
     _return.complete();
   }
 
   void completeError(Object error, [StackTrace stackTrace]) {
+    if (_return.isCompleted) {
+      return;
+    }
     _return.completeError(error, stackTrace);
   }
 }

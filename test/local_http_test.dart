@@ -43,7 +43,6 @@ class LocalHttpTest {
 
   _run() {
     group('Riak HTTP: ', () {
-
       test('simple run', () {
         var vtag1 = null;
         DateTime lastModified1 = null;
@@ -420,6 +419,12 @@ class LocalHttpTest {
               expect(response.success, true);
             });
         expect(f, completes);
+      });
+    });
+
+    group('close', () {
+      test('close', () {
+        expect(client.close(), completes);
       });
     });
   }
