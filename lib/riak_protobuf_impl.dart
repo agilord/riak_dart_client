@@ -12,6 +12,8 @@ class _ProtobufClient extends Client {
   _ProtobufClient(this.host, this.port,
       { Resolver resolverProvider(String bucket) }) : super._(resolverProvider);
 
+  Future close() => null;
+
   Future<Response> delete(DeleteRequest req) {
     // TODO: implement delete
   }

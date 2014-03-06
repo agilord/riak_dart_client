@@ -70,6 +70,9 @@ abstract class Client {
     }
     return null;
   }
+
+  /** Close client a free resources. */
+  Future close();
 }
 
 /**

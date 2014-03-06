@@ -7,24 +7,28 @@ part of riak_client;
 class _HttpClient extends Client {
   static final String HEADER_VCLOCK = "X-Riak-Vclock";
 
-  final String host;
-  final int port;
+  _Cluster _cluster = new _Cluster("cluster");
 
-  HttpClient _client = new HttpClient();
+  _HttpClient(String host, int port,
+      { Resolver resolverProvider(String bucket) })
+      : super._(resolverProvider) {
+    _cluster.join(new Node(host, httpPort: port));
+  }
 
-  _HttpClient(this.host, this.port,
-      { Resolver resolverProvider(String bucket) }) : super._(resolverProvider);
+  Future close() =>
+      _cluster.close();
 
   Future<Response> delete(DeleteRequest req) {
     var c = new Completer();
     var params = _quorum(req.quorum);
     _openUri("delete",
         "/buckets/${_uri(req.bucket)}/keys/${_uri(req.key)}", params)
-      .then((HttpClientRequest request) {
+      .then((_HttpConnection conn) {
+        conn.bindCompleter(c);
         if (req.vclock != null) {
-          request.headers.set(HEADER_VCLOCK, req.vclock);
+          conn.request.headers.set(HEADER_VCLOCK, req.vclock);
         }
-        return request.close();
+        return conn.request.close();
       })
       .then((HttpClientResponse response) {
         int code = response.statusCode;
@@ -33,8 +37,8 @@ class _HttpClient extends Client {
             code == HttpStatus.NOT_FOUND;
         c.complete(new Response(code, success));
       })
-      .catchError((e) {
-        c.completeError(e);
+      .catchError((e, st) {
+        c.completeError(e, st);
       });
     return c.future;
   }
@@ -51,22 +55,24 @@ class _HttpClient extends Client {
     }
     _openUri("get",
         "/buckets/${_uri(req.bucket)}/$type/${_uri(req.key)}", params)
-      .then((HttpClientRequest request) {
+      .then((_HttpConnection conn) {
+        conn.bindCompleter(c);
         if (req.ifNotVtag != null) {
-          request.headers.set(HttpHeaders.IF_NONE_MATCH, req.ifNotVtag);
+          conn.request.headers.set(HttpHeaders.IF_NONE_MATCH, req.ifNotVtag);
         }
         if (req.ifModifiedSince != null) {
-          request.headers.set(HttpHeaders.IF_MODIFIED_SINCE,
+          conn.request.headers.set(HttpHeaders.IF_MODIFIED_SINCE,
               _formatLastModified(req.ifModifiedSince));
         }
-        return request.close();
+        return conn.request.close();
       })
       .then(HttpBodyHandler.processResponse)
       .then((HttpClientResponseBody body) {
+        // TODO: return conn
         _extractFromBody(c, req.bucket, req.key, body, req.resolver);
       })
-      .catchError((e) {
-        c.completeError(e);
+      .catchError((e, st) {
+        c.completeError(e, st);
       });
     return c.future;
   }
@@ -133,8 +139,8 @@ class _HttpClient extends Client {
             vtags.add(line);
           }
         });
-      } catch (e) {
-        c.completeError(e);
+      } catch (e, st) {
+        c.completeError(e, st);
         return;
       }
 
@@ -153,8 +159,8 @@ class _HttpClient extends Client {
               siblings.close();
             }
           })
-          .catchError((e) {
-            siblings.addError(e);
+          .catchError((e, st) {
+            siblings.addError(e, st);
             siblings.close();
           });
       });
@@ -167,11 +173,11 @@ class _HttpClient extends Client {
           .then((Response<Object> response) {
             c.complete(response);
           })
-          .catchError((e) {
-            c.completeError(e);
+          .catchError((e, st) {
+            c.completeError(e, st);
           });
-      }).catchError((e) {
-        c.completeError(e);
+      }).catchError((e, st) {
+        c.completeError(e, st);
       });
     } else {
       c.complete(new Response(statusCode, success));
@@ -191,7 +197,9 @@ class _HttpClient extends Client {
         "/buckets/${_uri(req.bucket)}/$type" :
         "/buckets/${_uri(req.bucket)}/$type/${_uri(req.key)}";
     Future f = _openUri(method, path, params)
-      .then((HttpClientRequest request) {
+      .then((_HttpConnection conn) {
+        conn.bindCompleter(c);
+        var request = conn.request;
         request.headers.contentType = req.content.type;
         if (req.vclock != null) {
           request.headers.set(HEADER_VCLOCK, req.vclock);
@@ -239,8 +247,8 @@ class _HttpClient extends Client {
           return HttpBodyHandler.processResponse(response);
         }
       });
-    f.catchError((e) {
-      c.completeError(e);
+    f.catchError((e, st) {
+      c.completeError(e, st);
     });
     if (returnBody) {
       f.then((HttpClientResponseBody body) {
@@ -255,8 +263,8 @@ class _HttpClient extends Client {
           c.complete(new Response(code, success));
         }
       })
-      .catchError((e) {
-        c.completeError(e);
+      .catchError((e, st) {
+        c.completeError(e, st);
       });
     }
     return c.future;
@@ -276,22 +284,28 @@ class _HttpClient extends Client {
   Future<Response> ping() {
     var c = new Completer();
     _openUri("get", "/ping")
-      .then((HttpClientRequest request) => request.close())
+      .then((_HttpConnection conn) {
+        conn.bindCompleter(c);
+        return conn.request.close();
+      })
       .then((HttpClientResponse response) {
         int code = response.statusCode;
         bool success = code == HttpStatus.OK;
         c.complete(new Response(code, success));
       })
-      .catchError((e) {
-        c.completeError(e);
+      .catchError((e, st) {
+        c.completeError(e, st);
       });
     return c.future;
   }
 
   Stream<String> listBuckets() {
-    var sc = new StreamController<String>();
+    var sc = new StreamController<String>.broadcast();
     _openUri("get", "/buckets?buckets=true")
-      .then((HttpClientRequest request) => request.close())
+      .then((_HttpConnection conn) {
+        conn.bindStream(sc);
+        return conn.request.close();
+      })
       .then(HttpBodyHandler.processResponse)
       .then((HttpClientResponseBody body) {
         body.body["buckets"].forEach((b) {
@@ -299,17 +313,21 @@ class _HttpClient extends Client {
         });
         sc.close();
       })
-      .catchError((e) {
-        sc.addError(e);
+      .catchError((e, st) {
+        sc.addError(e, st);
+        sc.close();
       });
     return sc.stream;
   }
 
   Stream<String> listKeys(String bucket) {
-    var sc = new StreamController<String>();
+    var sc = new StreamController<String>.broadcast();
     // TODO: implement stream processing with "?keys=stream"
     _openUri("get", "/buckets/${_uri(bucket)}/keys?keys=true")
-      .then((HttpClientRequest request) => request.close())
+      .then((_HttpConnection conn) {
+        conn.bindStream(sc);
+        return conn.request.close();
+      })
       .then(HttpBodyHandler.processResponse)
       .then((HttpClientResponseBody body) {
         body.body["keys"].forEach((b) {
@@ -317,8 +335,9 @@ class _HttpClient extends Client {
         });
         sc.close();
       })
-      .catchError((e) {
-        sc.addError(e);
+      .catchError((e, st) {
+        sc.addError(e, st);
+        sc.close();
       });
     return sc.stream;
   }
@@ -329,12 +348,13 @@ class _HttpClient extends Client {
     _openUri(
         isDelete ? "delete" : "put",
         "/buckets/${_uri(bucket)}/props")
-    .then((HttpClientRequest request) {
+    .then((_HttpConnection conn) {
+      conn.bindCompleter(c);
       if (isDelete) {
         // nothing special here
       } else {
         // request.encoding = Encoding.UTF_8;
-        request.headers.contentType = MediaType.JSON;
+        conn.request.headers.contentType = MediaType.JSON;
         Map m = _nonNullMap({
           'n_val'     : props.replicas,
           'allow_mult': props.allowSiblings,
@@ -348,17 +368,17 @@ class _HttpClient extends Client {
             'dw': props.quorum.dw
           }, m);
         }
-        request.write(JSON.encode({ 'props': m }));
+        conn.request.write(JSON.encode({ 'props': m }));
       }
-      return request.close();
+      return conn.request.close();
     })
     .then((HttpClientResponse response) {
       int code = response.statusCode;
       bool success = code == HttpStatus.NO_CONTENT;
       c.complete(new Response(code, success));
     })
-    .catchError((e) {
-      c.completeError(e);
+    .catchError((e, st) {
+      c.completeError(e, st);
     });
     return c.future;
   }
@@ -366,7 +386,10 @@ class _HttpClient extends Client {
   Future<BucketProps> getBucketProps(String bucket) {
     var c = new Completer();
     _openUri("get", "/buckets/${_uri(bucket)}/props")
-      .then((HttpClientRequest request) => request.close())
+      .then((_HttpConnection conn) {
+        conn.bindCompleter(c);
+        return conn.request.close();
+      })
       .then(HttpBodyHandler.processResponse)
       .then((HttpClientResponseBody body) {
         Map m = body.body['props'];
@@ -381,20 +404,23 @@ class _HttpClient extends Client {
                 dw: m['dw'])
             ));
       })
-      .catchError((e) {
-        c.completeError(e);
+      .catchError((e, st) {
+        c.completeError(e, st);
       });
     return c.future;
   }
 
   Stream<String> queryIndex(IndexRequest req) {
-    var sc = new StreamController<String>();
+    var sc = new StreamController<String>.broadcast();
     var path = "/buckets/${_uri(req.bucket)}/index/${req.index}/${req.start}";
     if (req.end != null) {
       path = "$path/${req.end}";
     }
     _openUri("get", path)
-      .then((HttpClientRequest request) => request.close())
+      .then((_HttpConnection conn) {
+        conn.bindStream(sc);
+        return conn.request.close();
+      })
       .then(HttpBodyHandler.processResponse)
       .then((HttpClientResponseBody body) {
         body.body["keys"].forEach((k) {
@@ -402,8 +428,9 @@ class _HttpClient extends Client {
         });
         sc.close();
       })
-      .catchError((e) {
-        sc.addError(e);
+      .catchError((e, st) {
+        sc.addError(e, st);
+        sc.close();
       });
     return sc.stream;
   }
@@ -418,8 +445,8 @@ class _HttpClient extends Client {
       }
       c.complete(new Response(response.code, response.success, result));
     })
-    .catchError((e) {
-      c.completeError(e);
+    .catchError((e, st) {
+      c.completeError(e, st);
     });
     return c.future;
   }
@@ -432,16 +459,27 @@ class _HttpClient extends Client {
     f.then((response) {
       c.complete(new Response(response.code, response.success));
     })
-    .catchError((e) {
-      c.completeError(e);
+    .catchError((e, st) {
+      c.completeError(e, st);
     });
     return c.future;
   }
 
-  Future<HttpClientRequest> _openUri(String method, String path, [Map params]) {
-    return _client.openUrl(method,
-        new Uri(scheme:"http", host: host, port: port, path: path,
-            queryParameters: params));
+  Future<_HttpConnection> _openUri(String method, String path, [Map params]) {
+    return _cluster._httpPool.open().then((Connection<HttpClient> conn) {
+      return conn.connection.openUrl(method,
+          new Uri(scheme:"http",
+                  host: conn.endpoint.host,
+                  port: conn.endpoint.port,
+                  path: path,
+                  queryParameters: params))
+        .then((HttpClientRequest request) {
+          return new _HttpConnection(conn, request);
+        }, onError: (e, st) {
+          conn.completeError(e, st);
+          throw e;
+        });
+    });
   }
 
   Bucket _bucket(String name) {
@@ -475,6 +513,29 @@ class _HttpClient extends Client {
       }
     });
     return map;
+  }
+}
+
+class _HttpConnection<P> {
+  final Connection<HttpClient> conn;
+  final HttpClientRequest request;
+  _HttpConnection(this.conn, this.request);
+
+  bindCompleter(Completer c) {
+    c.future.then((_) {
+      conn.complete();
+    }, onError: (e, st) {
+      conn.completeError(e, st);
+    });
+  }
+
+
+  bindStream(StreamController<String> sc) {
+    sc.stream.listen((_) {}, onError: (e, st) {
+      conn.completeError(e, st);
+    }, onDone: () {
+      conn.complete();
+    });
   }
 }
 
