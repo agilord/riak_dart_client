@@ -38,8 +38,8 @@ class _Cluster {
   ConnectionPool<Socket> _pbPool;
 
   _Cluster(this.name) {
-    _httpPool = new ConnectionPool.http("$name/http");
-    _pbPool = new ConnectionPool.socket("$name/pb");
+    _httpPool = new HttpClientPool();
+    _pbPool = new SocketPool();
   }
 
   void join(Node node) {

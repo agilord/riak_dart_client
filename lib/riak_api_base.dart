@@ -384,7 +384,8 @@ class Quorum {
         return (replicas / 2).floor() + 1;
       case ONE:
         return 1;
-      return quorum;
+      default:
+        return quorum;
     }
   }
 
