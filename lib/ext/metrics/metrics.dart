@@ -8,7 +8,7 @@ import 'dart:collection';
 import 'dart:math' as math;
 
 part 'counter.dart';
-part 'reservior.dart';
+part 'reservoir.dart';
 part 'tracker.dart';
 
 abstract class Metric {

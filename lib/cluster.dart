@@ -34,8 +34,8 @@ class _Cluster {
 
   final String name;
   List<Node> _nodes = [];
-  ConnectionPool<HttpClient> _httpPool;
-  ConnectionPool<Socket> _pbPool;
+  HttpClientPool _httpPool;
+  SocketPool _pbPool;
 
   _Cluster(this.name) {
     _httpPool = new HttpClientPool();

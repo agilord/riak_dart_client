@@ -458,16 +458,8 @@ class _HttpClient extends Client {
 
   Future<HttpClientRequest> _request(
       Completer c, String method, String path, [Map params]) {
-    return _cluster._httpPool.acquire(releaseOn: c.future)
-        .then((HttpClient httpClient) {
-          Member m = _cluster._httpPool.getMember(httpClient);
-          return httpClient.openUrl(method,
-              new Uri(scheme:"http",
-                  host: m.endpoint.host,
-                  port: m.endpoint.port,
-                  path: path,
-                  queryParameters: params));
-    });
+    return _cluster._httpPool.openUrl(method: method, path: path,
+        queryParameters: params, releaseOn: c.future);
   }
 
   Bucket _bucket(String name) {

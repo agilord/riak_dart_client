@@ -74,12 +74,11 @@ abstract class Pool<T> {
   bool isValid(T object) => true;
 
   void validate() {
-    List toRemove = _idleObjects.where((o) => isValid(o)).toList();
+    List toRemove = _idleObjects.where((o) => !isValid(o)).toList();
     toRemove.forEach((o) {
       _idleObjects.remove(o);
       _destroy(o);
     });
-
   }
 
   Future<T> acquire({ int priority, Duration timeout, Future releaseOn }) {
@@ -115,7 +114,7 @@ abstract class Pool<T> {
         }
         w.c.completeError(new TimeoutException("acquire timeout", timeout));
         _waitingClients.remove(w);
-        _events.add(new PoolEvent(null, PoolEvent.ACQUIRE_TIMEOUT, timeout));
+        processEvent(new PoolEvent(null, PoolEvent.ACQUIRE_TIMEOUT, timeout));
       });
     }
 
@@ -137,7 +136,7 @@ abstract class Pool<T> {
         eventName = PoolEvent.RELEASE_ERROR;
       }
     }
-    _events.add(new PoolEvent(object, eventName, diff, error, stackTrace));
+    processEvent(new PoolEvent(object, eventName, diff, error, stackTrace));
     _processQueue();
   }
 
@@ -192,7 +191,7 @@ abstract class Pool<T> {
       _inCreation.add(f);
       f.then((v) {
         Duration diff = _now().difference(start);
-        _events.add(new PoolEvent(v, PoolEvent.FACTORY_CREATE, diff));
+        processEvent(new PoolEvent(v, PoolEvent.FACTORY_CREATE, diff));
         if (_isClosed) {
           _destroy(v);
         } else {
@@ -201,7 +200,7 @@ abstract class Pool<T> {
         }
       }, onError: (e, st) {
         Duration diff = _now().difference(start);
-        _events.add(new PoolEvent(null, PoolEvent.FACTORY_ERROR, diff, e, st));
+        processEvent(new PoolEvent(null, PoolEvent.FACTORY_ERROR, diff, e, st));
       }).whenComplete(() {
         _inCreation.remove(f);
         _processQueue();
@@ -217,10 +216,10 @@ abstract class Pool<T> {
       bool ok = isValid(object) &&
           (idleTimeout == null || idleTimeout.compareTo(diff) >= 0);
       if (ok) {
-        _events.add(new PoolEvent(object, PoolEvent.IDLE_WAIT, diff));
+        processEvent(new PoolEvent(object, PoolEvent.IDLE_WAIT, diff));
         return object;
       } else {
-        _events.add(new PoolEvent(object, PoolEvent.IDLE_TIMEOUT, diff));
+        processEvent(new PoolEvent(object, PoolEvent.IDLE_TIMEOUT, diff));
         _destroy(object);
       }
     }
@@ -255,6 +254,16 @@ abstract class Pool<T> {
       return _inDestroy.isEmpty ?
           new Future.value() : Future.wait(new List.from(_inDestroy));
     }).whenComplete(() => new Future.value());
+  }
+
+  /**
+   * Process an event in the pool (publishing it on the onEvent stream).
+   *
+   * This method is public only for subclasses that want to override event
+   * processing or add new events the same way the base class processes them.
+   */
+  void processEvent(PoolEvent event) {
+    _events.add(event);
   }
 }
 
