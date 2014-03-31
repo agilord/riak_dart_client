@@ -2,29 +2,28 @@
 // All rights reserved. Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-library latency;
+library socket_pool_test;
 
-import 'dart:math';
-
-import '../../../lib/ext/connection_pool/connection_pool.dart';
-import 'package:unittest/unittest.dart';
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
+
+import '../../../lib/ext/pool/connection_pool.dart';
+import 'package:unittest/unittest.dart';
 
 main() {
-  Random random = new Random(1234);
-  _EchoServer server;
   group('echo server', () {
+    _EchoServer server;
     setUp(() {
       server = new _EchoServer();
       return server.connect();
     });
     tearDown(() => server.close());
     test('single thread socket pool', () {
-      ConnectionPool pool = new ConnectionPool.socket("echo");
+      ConnectionPool<Socket> pool = new SocketPool();
       pool.join(new Endpoint(server.host, server.port));
-      Future f = pool.open().then((conn) {
-        Socket socket = conn.connection;
+
+      Future f = pool.acquire().then((Socket socket) {
         socket.add([0, 2, 11]);
         socket.flush();
 
@@ -34,7 +33,7 @@ main() {
           buffer.addAll(data);
           if (buffer.length == 3) {
             if (buffer[0] == 0 && buffer[1] == 2 && buffer[2] == 11) {
-              c.complete(conn);
+              c.complete(socket);
             } else {
               c.completeError(buffer);
             }
@@ -47,8 +46,8 @@ main() {
           }
         });
         return c.future;
-      }).then((Connection conn) {
-        conn.complete();
+      }).then((Socket socket) {
+        pool.release(socket);
         return true;
       }).then((_) {
         expect(server.byteCount[0], 1);
@@ -61,30 +60,8 @@ main() {
     });
   });
 
-  group('http (no connection)', () {
-    test('pool handling', () {
-      ConnectionPool pool = new ConnectionPool.http("echo");
-      pool.join(new Endpoint("127.0.0.1", 8080));
-      Future f1 = pool.open();
-      Future f2 = pool.open();
-      Future f = Future.wait([ f1, f2 ]);
-      HttpClient hc1 = null;
-      f.then((List conns) {
-        Connection c1 = conns[0];
-        Connection c2 = conns[1];
-        hc1 = c1.connection;
-        c1.complete();
-        c2.complete();
-        return pool.open();
-      }).then((conn) {
-        expect(hc1, conn.connection);
-        conn.complete();
-        return pool.close();
-      });
-      expect(f, completes);
-    });
-  });
 }
+
 
 class _EchoServer {
   String host = "127.0.0.1";
